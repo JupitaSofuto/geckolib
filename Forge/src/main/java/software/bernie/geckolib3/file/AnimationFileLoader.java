@@ -28,7 +28,7 @@ public class AnimationFileLoader {
 			Animation animation;
 			try {
 				animation = JsonAnimationUtils.deserializeJsonToAnimation(
-						JsonAnimationUtils.getAnimation(jsonRepresentation, animationName), parser);
+						JsonAnimationUtils.getAnimation(jsonRepresentation, animationName), parser, location);
 				animationFile.putAnimation(animationName, animation);
 			} catch (ChainedJsonException e) {
 				GeckoLib.LOGGER.error("Could not load animation: {}", animationName, e);

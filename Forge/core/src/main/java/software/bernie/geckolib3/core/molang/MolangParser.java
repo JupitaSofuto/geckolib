@@ -135,7 +135,7 @@ public class MolangParser extends MathBuilder {
 		return getVariable(name);
 	}
 
-	public MolangExpression parseJson(JsonElement element) throws MolangException {
+	public MolangExpression parseJson(JsonElement element, String animationFile, String animationName, String boneName, int axis) throws MolangException {
 		if (!element.isJsonPrimitive())
 			return ZERO;
 
@@ -151,7 +151,7 @@ public class MolangParser extends MathBuilder {
 				return new MolangValue(this, new Constant(Double.parseDouble(string)));
 			}
 			catch (NumberFormatException ex) {
-				return parseExpression(string);
+				return parseExpression(string, animationFile, animationName, boneName, axis);
 			}
 		}
 
@@ -161,7 +161,7 @@ public class MolangParser extends MathBuilder {
 	/**
 	 * Parse a molang expression
 	 */
-	public MolangExpression parseExpression(String expression) throws MolangException {
+	public MolangExpression parseExpression(String expression, String animationFile, String animationName, String boneName, int axis) throws MolangException {
 		MolangMultiStatement result = null;
 
 		for (String split : expression.toLowerCase().trim().split(";")) {
@@ -171,12 +171,12 @@ public class MolangParser extends MathBuilder {
 				if (result == null)
 					result = new MolangMultiStatement(this);
 
-				result.expressions.add(parseOneLine(trimmed, result));
+				result.expressions.add(parseOneLine(trimmed, result, animationFile, animationName, boneName, axis));
 			}
 		}
 
 		if (result == null)
-			throw new MolangException("Molang expression cannot be blank!");
+			return this.exceptParseExpression(expression, animationFile, animationName, boneName, axis, new MolangException("Molang expression cannot be blank!"));
 
 		return result;
 	}
@@ -184,13 +184,13 @@ public class MolangParser extends MathBuilder {
 	/**
 	 * Parse a single Molang statement
 	 */
-	protected MolangExpression parseOneLine(String expression, MolangMultiStatement currentStatement) throws MolangException {
+	protected MolangExpression parseOneLine(String expression, MolangMultiStatement currentStatement, String animationFile, String animationName, String boneName, int axis) throws MolangException {
 		if (expression.startsWith(RETURN)) {
 			try {
 				return new MolangValue(this, parse(expression.substring(RETURN.length()))).addReturn();
 			}
 			catch (Exception e) {
-				throw new MolangException("Couldn't parse return '" + expression + "' expression!");
+				return this.exceptParseOneLine(expression, currentStatement, animationFile, animationName, boneName, axis, new MolangException("Couldn't parse return '" + expression + "' expression!", e));
 			}
 		}
 
@@ -216,7 +216,7 @@ public class MolangParser extends MathBuilder {
 			return new MolangValue(this, parseSymbolsMolang(symbols));
 		}
 		catch (Exception e) {
-			throw new MolangException("Couldn't parse '" + expression + "' expression!");
+			return this.exceptParseOneLine(expression, currentStatement, animationFile, animationName, boneName, axis, new MolangException("Couldn't parse '" + expression + "' expression!", e));
 		}
 	}
 
@@ -228,9 +228,9 @@ public class MolangParser extends MathBuilder {
 			return this.parseSymbols(symbols);
 		}
 		catch (Exception e) {
-			e.printStackTrace();
 
-			throw new MolangException("Couldn't parse an expression!");
+
+			throw new MolangException("Couldn't parse an expression!", e);
 		}
 	}
 
@@ -241,5 +241,31 @@ public class MolangParser extends MathBuilder {
 	@Override
 	protected boolean isOperator(String s) {
 		return super.isOperator(s) || s.equals("=");
+	}
+
+	private MolangExpression exceptParseExpression(String expression, String animationFile, String animationName, String boneName, int axis, MolangException e) throws MolangException {
+		var result = Dummy.onParseFailureExpression(expression, animationFile, animationName, boneName, axis, e);
+		if (result == null) throw e;
+
+		return this.parseExpression(result, animationFile, animationName, boneName, axis);
+	}
+
+	private MolangExpression exceptParseOneLine(String expression, MolangMultiStatement currentStatement, String animationFile, String animationName, String boneName, int axis, MolangException e) throws MolangException {
+		var result = Dummy.onParseFailureExpression(expression, animationFile, animationName, boneName, axis, e);
+		if (result == null) throw e;
+
+		return this.parseOneLine(result, currentStatement, animationFile, animationName, boneName, axis);
+	}
+
+	public MolangExpression parseJson(JsonElement element) throws MolangException {
+		return this.parseJson(element, Dummy.ANIMATION_FILE, Dummy.ANIMATION_NAME, Dummy.BONE_NAME, -1);
+	}
+
+	public MolangExpression parseExpression(String expression) throws MolangException {
+		return this.parseExpression(expression, Dummy.ANIMATION_FILE, Dummy.ANIMATION_NAME, Dummy.BONE_NAME, -1);
+	}
+
+	protected MolangExpression parseOneLine(String expression, MolangMultiStatement currentStatement) throws MolangException {
+		return this.parseOneLine(expression, currentStatement, Dummy.ANIMATION_FILE, Dummy.ANIMATION_NAME, Dummy.BONE_NAME, -1);
 	}
 }

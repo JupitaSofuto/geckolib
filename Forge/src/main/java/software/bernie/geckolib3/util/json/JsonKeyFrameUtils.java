@@ -9,7 +9,7 @@ import com.eliotlash.mclib.math.IValue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;import net.minecraft.resources.ResourceLocation;
 import org.apache.commons.lang3.math.NumberUtils;
 import software.bernie.geckolib3.GeckoLib;
 import software.bernie.geckolib3.core.ConstantValue;
@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class JsonKeyFrameUtils {
 	private static VectorKeyFrameList<KeyFrame<IValue>> convertJson(List<Map.Entry<String, JsonElement>> element,
-			boolean isRotation, MolangParser parser) throws NumberFormatException, MolangException {
+			boolean isRotation, MolangParser parser, ResourceLocation animationFile, String animationName, String boneName) throws NumberFormatException, MolangException {
 		IValue previousXValue = null;
 		IValue previousYValue = null;
 		IValue previousZValue = null;
@@ -50,9 +50,9 @@ public class JsonKeyFrameUtils {
 			double animationTimeDifference = currentKeyFrameLocation - previousKeyFrameLocation;
 
 			JsonArray vectorJsonArray = getKeyFrameVector(keyframe.getValue());
-			IValue xValue = parseExpression(parser, vectorJsonArray.get(0));
-			IValue yValue = parseExpression(parser, vectorJsonArray.get(1));
-			IValue zValue = parseExpression(parser, vectorJsonArray.get(2));
+			IValue xValue = parseExpression(parser, vectorJsonArray.get(0), animationFile, animationName, boneName, 0);
+			IValue yValue = parseExpression(parser, vectorJsonArray.get(1), animationFile, animationName, boneName, 1);
+			IValue zValue = parseExpression(parser, vectorJsonArray.get(2), animationFile, animationName, boneName, 2);
 
 			IValue currentXValue = isRotation && xValue instanceof ConstantValue
 					? ConstantValue.fromDouble(Math.toRadians(-xValue.get()))
@@ -152,9 +152,9 @@ public class JsonKeyFrameUtils {
 	 * @throws NumberFormatException The number format exception
 	 */
 	public static VectorKeyFrameList<KeyFrame<IValue>> convertJsonToKeyFrames(
-			List<Map.Entry<String, JsonElement>> element, MolangParser parser)
+			List<Map.Entry<String, JsonElement>> element, MolangParser parser, ResourceLocation animationFile, String animationName, String boneName)
 			throws NumberFormatException, MolangException {
-		return convertJson(element, false, parser);
+		return convertJson(element, false, parser, animationFile, animationName, boneName);
 	}
 
 	/**
@@ -166,18 +166,42 @@ public class JsonKeyFrameUtils {
 	 * @throws NumberFormatException
 	 */
 	public static VectorKeyFrameList<KeyFrame<IValue>> convertJsonToRotationKeyFrames(
-			List<Map.Entry<String, JsonElement>> element, MolangParser parser)
+			List<Map.Entry<String, JsonElement>> element, MolangParser parser, ResourceLocation animationFile, String animationName, String boneName)
 			throws NumberFormatException, MolangException {
-		VectorKeyFrameList<KeyFrame<IValue>> frameList = convertJson(element, true, parser);
+		VectorKeyFrameList<KeyFrame<IValue>> frameList = convertJson(element, true, parser, animationFile, animationName, boneName);
 		return new VectorKeyFrameList(frameList.xKeyFrames, frameList.yKeyFrames, frameList.zKeyFrames);
 	}
 
-	public static IValue parseExpression(MolangParser parser, JsonElement element) throws MolangException {
+	public static IValue parseExpression(MolangParser parser, JsonElement element, ResourceLocation animationFile, String animationName, String boneName, int axis) throws MolangException {
 		if (element.getAsJsonPrimitive().isString()) {
-			return parser.parseJson(element);
+			return parser.parseJson(element, animationFile.toString(), animationName, boneName, axis); // NOTE: Genesis CoreMod makes this use the ResourceLocation instance
 		} else {
-			return ConstantValue.fromDouble(element.getAsDouble());
+			return ConstantValue.fromDouble(parseExpressionDouble(element, animationFile, animationName, boneName, axis));
 		}
 	}
 
+	private static double parseExpressionDouble(JsonElement element, ResourceLocation animationFile, String animationName, String boneName, int axis) {
+		try {
+			return element.getAsDouble();
+		} catch (UnsupportedOperationException e) {
+			return Dummy.onParseFailureDouble(element, animationFile, animationName, boneName, axis, e);
+		}
+	}
+
+	public static VectorKeyFrameList<KeyFrame<IValue>> convertJsonToKeyFrames(
+		List<Map.Entry<String, JsonElement>> element,
+		MolangParser parser)
+		throws NumberFormatException, MolangException {
+		return convertJsonToKeyFrames(element, parser, Dummy.ANIMATION_FILE, Dummy.ANIMATION_NAME, Dummy.BONE_NAME);
+	}
+
+	public static VectorKeyFrameList<KeyFrame<IValue>> convertJsonToRotationKeyFrames(
+		List<Map.Entry<String, JsonElement>> element, MolangParser parser)
+		throws NumberFormatException, MolangException {
+		return convertJsonToRotationKeyFrames(element, parser, Dummy.ANIMATION_FILE, Dummy.ANIMATION_NAME, Dummy.BONE_NAME);
+	}
+
+	public static IValue parseExpression(MolangParser parser, JsonElement element) throws MolangException {
+		return parseExpression(parser, element, Dummy.ANIMATION_FILE, Dummy.ANIMATION_NAME, Dummy.BONE_NAME, -1);
+	}
 }

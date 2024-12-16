@@ -8,7 +8,7 @@ package software.bernie.geckolib3.util.json;
 import com.eliotlash.mclib.math.IValue;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.*;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.ChainedJsonException;
 import software.bernie.geckolib3.core.builder.Animation;
 import software.bernie.geckolib3.core.builder.ILoopType;
@@ -203,7 +203,7 @@ public class JsonAnimationUtils {
 	 * @throws IllegalStateException Throws this exception if the JSON is formatted
 	 *                               incorrectly
 	 */
-	public static Animation deserializeJsonToAnimation(Map.Entry<String, JsonElement> element, MolangParser parser)
+	public static Animation deserializeJsonToAnimation(Map.Entry<String, JsonElement> element, MolangParser parser, ResourceLocation animationFile)
 			throws ClassCastException, IllegalStateException {
 		Animation animation = new Animation();
 		JsonObject animationJsonObject = element.getValue().getAsJsonObject();
@@ -248,7 +248,7 @@ public class JsonAnimationUtils {
 			JsonObject boneJsonObj = bone.getValue().getAsJsonObject();
 			try {
 				boneAnimation.scaleKeyFrames = JsonKeyFrameUtils
-						.convertJsonToKeyFrames(new ObjectArrayList<>(getScaleKeyFrames(boneJsonObj)), parser);
+						.convertJsonToKeyFrames(new ObjectArrayList<>(getScaleKeyFrames(boneJsonObj)), parser, animationFile, animation.animationName, boneAnimation.boneName);
 			} catch (Exception e) {
 				// No scale key frames found
 				boneAnimation.scaleKeyFrames = new VectorKeyFrameList<>();
@@ -256,7 +256,7 @@ public class JsonAnimationUtils {
 
 			try {
 				boneAnimation.positionKeyFrames = JsonKeyFrameUtils
-						.convertJsonToKeyFrames(new ObjectArrayList<>(getPositionKeyFrames(boneJsonObj)), parser);
+						.convertJsonToKeyFrames(new ObjectArrayList<>(getPositionKeyFrames(boneJsonObj)), parser, animationFile, animation.animationName, boneAnimation.boneName);
 			} catch (Exception e) {
 				// No position key frames found
 				boneAnimation.positionKeyFrames = new VectorKeyFrameList<>();
@@ -264,7 +264,7 @@ public class JsonAnimationUtils {
 
 			try {
 				boneAnimation.rotationKeyFrames = JsonKeyFrameUtils
-						.convertJsonToRotationKeyFrames(new ObjectArrayList<>(getRotationKeyFrames(boneJsonObj)), parser);
+						.convertJsonToRotationKeyFrames(new ObjectArrayList<>(getRotationKeyFrames(boneJsonObj)), parser, animationFile, animation.animationName, boneAnimation.boneName);
 			} catch (Exception e) {
 				// No rotation key frames found
 				boneAnimation.rotationKeyFrames = new VectorKeyFrameList<>();
@@ -307,5 +307,10 @@ public class JsonAnimationUtils {
 			max = Math.max(value, max);
 		}
 		return max;
+	}
+
+	public static Animation deserializeJsonToAnimation(Map.Entry<String, JsonElement> element, MolangParser parser)
+		throws ClassCastException, IllegalStateException {
+		return deserializeJsonToAnimation(element, parser, Dummy.ANIMATION_FILE);
 	}
 }
